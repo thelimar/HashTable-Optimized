@@ -25,7 +25,7 @@ To start with let's make it clear on the initial version of a project. The main 
 The logical question is: why do we use lists? Isn't it simpler and faster just to have an array of strings? The thing is sometimes different words will have the exact remainder of the division of the hash by hash table's size - this is called **_collision_**. In order to deal with it we are using linked list, so, in case the spot in array for the value is already occupied, we can just link the new value to the older one.
 So, due to the way we handle collisions the efficiency of our hash table depends heavily on the **_spread_** of a hash function used. This means that the more frequently the hash functions returns the same value for different words the slower is our find function. That's why for this project we have to choose the most spread-efficient hash function out there. In my case, I have chosen MurmurHash2. You can find the source code of it [here](https://en.wikipedia.org/wiki/MurmurHash#:~:text=MurmurHash%20is%20a%20non%2Dcryptographic%20hash,used%20in%20its%20inner%20loop). You can see the collision graph for my hash table that used MurmurHash2 to store 51381 word pairs. (you can find the dictionary I used [here](https://github.com/thelimar/HashTable-Optimised/blob/main/ENRUS.TXT))
 
-![CollisionGraph](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/MurMur.png?raw=true)
+![CollizionGraph](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/MurMur.png?raw=true)
 
 <a name="start"></a>
 ## 3. Getting started
@@ -60,7 +60,7 @@ So, now we are ready to face the problem – optimizing our project. The key too
 
 Alright, now when profiler report will focus exactly on our most used by user find function rather than loading table which usually happens only one time per session we are finally ready to profile our project. Another important thing, though, is to switch off all debug functions such as verifiers, as they won't be present in the final build. All compilation from now on will be performed in Release mode with Visual Studio's /O2 optimization that favors speed. (because what's the use of optimizing something if compiler can make it better than you)
 
-![OptimisationChosen](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/OptimisationChosen.jpg?raw=true)
+![OptimizationChosen](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/OptimisationChosen.jpg?raw=true)
 
 The Instrumentation option of Visual Studio's profiler gives us the following results on the initial project version:
 
@@ -210,7 +210,7 @@ unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
 As you can see I even had to change the prototype because I needed buffer to store 4 of my integers from _m128i_, and in order not to allocate and free memory every time the hash function is called (which takes up much longer time than we win with optimization) I decided to have buffer as an argument, so the allocation will happen only once. 
 So, the Profiler Report says that now program runs faster by... 2.5 seconds which is roughly 1.07 times faster.
 
-![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/Intermediate.jpg?raw=true)
+![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimiяzd/blob/main/Images/Intermediate.jpg?raw=true)
 
 Well, ![HonestWork](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HonestWork.jpg?raw=true)
 

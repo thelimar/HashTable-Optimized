@@ -3,6 +3,8 @@
 #include <locale.h>
 #include "OneWayLinkedList.h"
 #include "oneg.h"
+#include <intrin.h>
+
 
 enum HashParams
 {
@@ -15,16 +17,16 @@ struct HashTable
 {
 	size_t size;
 	List* DataArray;
-	unsigned int (*HashFunc) (char* str);
+	unsigned int (*HashFunc) (char* str, __m128i* drop_buffer);
 };
 
 
-HashTable HashTableBuild (unsigned int (*HashFunc) (char* str), size_t size);
+HashTable HashTableBuild (unsigned int (*HashFunc) (char* str, __m128i* drop_buffer), size_t size);
 int HashTableDestruct (HashTable* dis);
 int HashTableVerificator (HashTable dis);
-int HashTableLoad (HashTable* dis, char* buffer, int nLines);
+int HashTableLoad (HashTable* dis, char* buffer, int nLines, __m128i* drop_buffer);
 int CollisionDump (HashTable dis, FILE* output);
-char* HashFind (HashTable dis, char* str_to_find);
+char* HashFind (HashTable dis, char* str_to_find, __m128i* drop_buffer);
 
 unsigned int HashFuncOne (char* str);
 unsigned int HashFuncLen (char* str);
@@ -33,9 +35,11 @@ unsigned int HashFuncSumDivLen (char* str);
 unsigned int HashFuncDedSum (char* str);
 unsigned int HashFuncROL (char* str);
 unsigned int HashFuncROR (char* str);
-unsigned int HashFuncMurMur2 (char* str);
+unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer);
 
-HashTable HashTableBuild (unsigned int (*HashFunc) (char* str), size_t size)
+int SSEstrlen (char* str);
+
+HashTable HashTableBuild (unsigned int (*HashFunc) (char* str, __m128i* drop_buffer), size_t size)
 {
 	HashTable dis_hashtable = { size, 0, HashFunc};
 	dis_hashtable.DataArray = (List*) calloc (size, sizeof (List));
@@ -72,11 +76,11 @@ int HashTableVerificator (HashTable dis)
 	return 0;
 }
 
-int HashTableLoad (HashTable* dis, char* buffer, int nLines)
+int HashTableLoad (HashTable* dis, char* buffer, int nLines, __m128i* drop_buffer)
 {
 	for (int i = 0; i < nLines / 2; i++)
 	{
-		ListPush (&dis->DataArray[(unsigned int) dis->HashFunc (buffer) % dis->size], buffer, buffer + strlen (buffer) + 1);
+		ListPush (&dis->DataArray[(unsigned int) dis->HashFunc (buffer, drop_buffer) % dis->size], buffer, buffer + strlen (buffer) + 1);
 		buffer += strlen (buffer) + 1;
 		buffer += strlen (buffer) + 1;
 	}
@@ -95,9 +99,9 @@ int CollisionDump (HashTable dis, FILE* output)
 }
 
 
-char* HashFind (HashTable dis, char* str_to_find)
+char* HashFind (HashTable dis, char* str_to_find, __m128i* drop_buffer)
 {
-	unsigned int hash = dis.HashFunc (str_to_find) % dis.size;
+	unsigned int hash = dis.HashFunc (str_to_find, drop_buffer) % dis.size;
 	if (dis.DataArray[hash].size == 0)
 		return NULL;
 	else
@@ -172,9 +176,26 @@ unsigned int HashFuncROL (char* str)
 	return sum;
 }
 
-unsigned int HashFuncMurMur2 (char* str)
+int SSEstrlen (char* str)
 {
-	int len = strlen (str);
+	int len = 0;
+	int seg_len = 16;
+	char zero_str[16] = "\0";
+
+	while (seg_len == 16)
+	{
+		seg_len = _mm_cmpistri (*((__m128i*) str), *((__m128i*) zero_str), _SIDD_CMP_EQUAL_EACH);
+		len += seg_len;
+		str += 16;
+	}
+
+	return len;
+}
+
+unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
+{
+	int len = SSEstrlen (str);
+
 	const unsigned int mask = 0x5bd1e995;
 	const unsigned int seed = 0;
 	const int r = 24;
@@ -182,23 +203,57 @@ unsigned int HashFuncMurMur2 (char* str)
 	unsigned int hash = seed ^ len;
 	const unsigned char* data = (const unsigned char*) str;
 
-	unsigned int k = 0;
+	__m128i k_s = _mm_set_epi32 (data[0], data[4], data[8], data[12]);
+	k_s = _mm_or_si128 (_mm_slli_epi32 (_mm_set_epi32 (data[1], data[5], data[9], data[13]), 8), k_s);
+	k_s = _mm_or_si128 (_mm_slli_epi32 (_mm_set_epi32 (data[2], data[6], data[10], data[14]), 16), k_s);
+	k_s = _mm_or_si128 (_mm_slli_epi32 (_mm_set_epi32 (data[3], data[7], data[11], data[15]), 24), k_s);
+
+	if (!drop_buffer)
+		return NULL;
+
+	while (len >= 16)
+	{
+		k_s = _mm_and_si128 (k_s, _mm_set1_epi32 (mask));
+		__m128i k_s_copy = k_s;
+		k_s = _mm_srli_epi32 (k_s, r);
+		k_s = _mm_xor_si128 (k_s, k_s_copy);
+		k_s = _mm_and_si128 (k_s, _mm_set1_epi32 (mask));
+
+		_mm_store_si128 (drop_buffer, k_s);
+
+		hash *= mask;
+		hash ^= ((unsigned int*) drop_buffer)[3];
+
+		hash *= mask;
+		hash ^= ((unsigned int*) drop_buffer)[2];
+
+		hash *= mask;
+		hash ^= ((unsigned int*) drop_buffer)[1];
+
+		hash *= mask;
+		hash ^= ((unsigned int*) drop_buffer)[0];
+
+		len -= 16;
+		data += 16;
+		k_s = *((__m128i*) data);
+	}
+
+	k_s = _mm_mullo_epi32 (k_s, _mm_set1_epi32 (mask));
+	__m128i k_s_copy = k_s;
+	k_s_copy = _mm_srli_epi32 (k_s_copy, r);
+	k_s = _mm_xor_si128 (k_s, k_s_copy);
+	k_s = _mm_mullo_epi32 (k_s, _mm_set1_epi32(mask));
+
+	_mm_store_si128 (drop_buffer, k_s);
+	int offset = 3;
 
 	while (len >= 4)
 	{
-		k = data[0];
-		k |= data[1] << 8;
-		k |= data[2] << 16;
-		k |= data[3] << 24;
-
-		k *= mask;
-		k ^= k >> r;
-		k *= mask;
-
 		hash *= mask;
-		hash ^= k;
+		hash ^= ((unsigned int*) drop_buffer) [offset];
 
 		data += 4;
+		offset--;
 		len -= 4;
 	}
 

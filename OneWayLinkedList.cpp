@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <intrin.h>
 
 //#define DEBUG
 
@@ -161,9 +162,9 @@ int ListDump (List dis)
 list_data ListFind (List dis, list_data find_data)
 {
 	ListNode* next_node = dis.head;
-	for (int i = 0; i < dis.size; i++)
+	for (unsigned int i = 0; i < dis.size; i++)
 	{
-		if (strequ (next_node->data_one, find_data))
+		if ((_mm_cmpistri (*((__m128i*) next_node->data_one), *((__m128i*) find_data), _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY) == 16))
 			return next_node->data_two;
 		else
 			next_node = next_node->next;

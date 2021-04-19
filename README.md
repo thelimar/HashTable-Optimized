@@ -1,5 +1,5 @@
 # HashTable-Optimised
-Optimising English to Russian dictionary based on hash table using SSE instructions
+Optimising English to Russian dictionary project based on hash table using SSE instructions
 
 # Table of contents
 1. [Introduction](#intro)

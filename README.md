@@ -210,7 +210,7 @@ unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
 As you can see I even had to change the prototype because I needed buffer to store 4 of my integers from _m128i_, and in order not to allocate and free memory every time the hash function is called (which takes up much longer time than we win with optimization) I decided to have buffer as an argument, so the allocation will happen only once. 
 So, the Profiler Report says that now program runs faster by... 2.5 seconds which is roughly 1.07 times faster.
 
-![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimiяzd/blob/main/Images/Intermediate.jpg?raw=true)
+![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/Intermediate.jpg?raw=true)
 
 Well, ![HonestWork](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HonestWork.jpg?raw=true)
 

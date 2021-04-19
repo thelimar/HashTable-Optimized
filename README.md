@@ -1,28 +1,28 @@
-# HashTable-Optimised
-Optimising English to Russian dictionary project based on hash table using SSE instructions
+# HashTable-Optimized
+Optimizing English to Russian dictionary project based on hash table using SSE instructions
 
 # Table of contents
 1. [Introduction](#intro)
-2. [Unoptimised project](#unopt)
+2. [Unoptimized project](#unopt)
 3. [Getting started](#start)
-4. [HashFunc optimisation](#hashfunc)
-5. [HashFind optimisation](#hashfind)
+4. [HashFunc optimization](#hashfunc)
+5. [HashFind optimization](#hashfind)
 6. [Conclusion](#conclusion)
 7. [Links](#links)
 
 <a name="intro"></a>
 ## 1. Introduction
 
-I have made a project that uses chained hash table with english words from a dictionary as keys and their coresponding russian translation as values. With a simple function of finding a value with a key we get a very simplistic word-by-word translator. After getting a functionable version of a project I decided to optimise it using SSE instructions.
+I have made a project that uses chained hash table with English words from a dictionary as keys and their corresponding Russian translation as values. With a simple function of finding a value with a key we get a very simplistic word-by-word translator. After getting a functioning version of a project I decided to optimize it using SSE instructions.
 
 <a name="unopt"></a>
-## 2. Unoptimised project
+## 2. Unoptimized project
 
-To start with let's make it clear on the initial version of a project. The main structure being used is HashTable. It has 3 fields: its size, its hash function and an array of linked lists. When we are filling the hash table we are taking the english word, computing its hash and then pushing the russian word into list with index equal to the remainder of the division of the hash by hash table's size. 
+To start with let's make it clear on the initial version of a project. The main structure being used is HashTable. It has 3 fields: its size, its hash function and an array of linked lists. When we are filling the hash table we are taking the English word, computing its hash and then pushing the Russian word into list with index equal to the remainder of the division of the hash by hash table's size. 
 
 ![Hash table structure](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HashStruct.jpg?raw=true)
 
-The logical question is: why do we use lists? Isn't it simplier and faster just to have an array of strings? The thing is sometimes different words will have the exact remainder of the devision of the hash by hash table's size - this is called **_collision_**. In order to deal with it we are using linked list, so, in case the spot in array for the value is already occupied, we can just link the new value to the older one.
+The logical question is: why do we use lists? Isn't it simpler and faster just to have an array of strings? The thing is sometimes different words will have the exact remainder of the division of the hash by hash table's size - this is called **_collision_**. In order to deal with it we are using linked list, so, in case the spot in array for the value is already occupied, we can just link the new value to the older one.
 So, due to the way we handle collisions the efficiency of our hash table depends heavily on the **_spread_** of a hash function used. This means that the more frequently the hash functions returns the same value for different words the slower is our find function. That's why for this project we have to choose the most spread-efficient hash function out there. In my case, I have chosen MurmurHash2. You can find the source code of it [here](https://en.wikipedia.org/wiki/MurmurHash#:~:text=MurmurHash%20is%20a%20non%2Dcryptographic%20hash,used%20in%20its%20inner%20loop). You can see the collision graph for my hash table that used MurmurHash2 to store 51381 word pairs. (you can find the dictionary I used [here](https://github.com/thelimar/HashTable-Optimised/blob/main/ENRUS.TXT))
 
 ![CollisionGraph](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/MurMur.png?raw=true)
@@ -30,7 +30,7 @@ So, due to the way we handle collisions the efficiency of our hash table depends
 <a name="start"></a>
 ## 3. Getting started
 
-So, now we are ready to face the problem – optimising our project. The key tool that will help us in this complicated task is **_profiler_**. Profiler is a tool that shows you how much program working time some function is taking, memory and CPU usage, etc. I am coding in Visual Studio 2019 Community edition and it has built in _free_ profiler! You can access it with Debug-> Prformance Profiler or with Alt+F2. Another thing we need is a stress test – a program that will emulate long usage of our hash table. When writing a stress test it is important to remember what are the most called by user functions of your program, so you can call them more in order to emulate user's behavior more precisely. In my case, the most used function is finding a value with a key, so in the stress test I call 70 million times with "different" arguments, as user wouldn't search one and the same word over and over again. It looks like this:
+So, now we are ready to face the problem – optimizing our project. The key tool that will help us in this complicated task is **_profiler_**. Profiler is a tool that shows you how much program working time some function is taking, memory and CPU usage, etc. I am coding in Visual Studio 2019 Community edition and it has built in _free_ profiler! You can access it with Debug -> Performance Profiler or with Alt+F2. Another thing we need is a stress test – a program that will emulate long usage of our hash table. When writing a stress test it is important to remember what are the most called by user functions of your program, so you can call them more in order to emulate user's behavior more precisely. In my case, the most used function is finding a value with a key, so in the stress test I call 70 million times with "different" arguments, as user wouldn't search one and the same word over and over again. It looks like this:
 ```
 	char input_str[MAX_WORD_LEN] = "perspective";
 
@@ -58,7 +58,7 @@ So, now we are ready to face the problem – optimising our project. The key too
 	}
 ```
 
-Alright, now when profiler report will focus exactly on our most used by user find function rather than loading table which usually happens only one time per session we are finally ready to profile our project. Another important thing, though, is to switch off all debug functions such as verificators, as they won't be present in the final build. All compilation from now on will be performed in Release mode with Visual Studios's /O2 optimisation that favors speed. (because what's the use of optimising something if compiler can make it better than you)
+Alright, now when profiler report will focus exactly on our most used by user find function rather than loading table which usually happens only one time per session we are finally ready to profile our project. Another important thing, though, is to switch off all debug functions such as verifiers, as they won't be present in the final build. All compilation from now on will be performed in Release mode with Visual Studio's /O2 optimization that favors speed. (because what's the use of optimizing something if compiler can make it better than you)
 
 ![OptimisationChosen](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/OptimisationChosen.jpg?raw=true)
 
@@ -66,10 +66,10 @@ The Instrumentation option of Visual Studio's profiler gives us the following re
 
 ![InitialReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/InitialReport.jpg?raw=true)
 
-As you can see, with the total working time of 43.3 seconds, 40% and 30% of this time is taken by HashFind and HashFuncMurMur2 respectively. Let's start with optimising HashFuncMurMur2 as it doesn't call any other function and eats up almost the same amount of time as the leader – HashFind.
+As you can see, with the total working time of 43.3 seconds, 40% and 30% of this time is taken by HashFind and HashFuncMurMur2 respectively. Let's start with optimizing HashFuncMurMur2 as it doesn't call any other function and eats up almost the same amount of time as the leader – HashFind.
 
 <a name="hashfunc"></a>
-## 4. HashFunc optimisation
+## 4. HashFunc optimization
 
 This is the initial code of HashFuncMurMur2:
 ```
@@ -122,7 +122,7 @@ unsigned int HashFuncMurMur2 (char* str)
 }
 ```
 
-After what seemed like an eternity of debuging I finally came up with this code that uses SSE instructions:
+After what seemed like an eternity of debugging I finally came up with this code that uses SSE instructions:
 ```
 unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
 {
@@ -207,20 +207,20 @@ unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
 	return hash;
 }
 ```
-As you can see I even had to change the prototype because I needed buffer to store 4 of my integers from _m128i_, and in order not to allocate and free memory every time the hash function is called (which takes up much longer time than we win with optimisation) I decided to have buffer as an argument, so the allocation will happen only once. 
-So, the Profiler Report says that now progrmas runs faster by... 2.5 seconds which is roughly 1.07 times faster.
+As you can see I even had to change the prototype because I needed buffer to store 4 of my integers from _m128i_, and in order not to allocate and free memory every time the hash function is called (which takes up much longer time than we win with optimization) I decided to have buffer as an argument, so the allocation will happen only once. 
+So, the Profiler Report says that now program runs faster by... 2.5 seconds which is roughly 1.07 times faster.
 
 ![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/Intermediate.jpg?raw=true)
 
 Well, ![HonestWork](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HonestWork.jpg?raw=true)
 
-We are probably seeing such pityful result as the words from dictionary are not very long and MururHash2 basically already deals with 4 letters simultaneously, so the adventage of using SSE is not that noticable.
-Currently, I don't have any idea how to optimise MurmurHash2 any further. Rewriting strlen() with SSE only made the program slightly slower (by ~1 second). So, now we have nothing to do but move on to optimising HashFind!
+We are probably seeing such pitiful result as the words from dictionary are not very long and MururHash2 basically already deals with 4 letters simultaneously, so the advantage of using SSE is not that noticeable.
+Currently, I don't have any idea how to optimize MurmurHash2 any further. Rewriting strlen() with SSE only made the program slightly slower (by ~1 second). So, now we have nothing to do but move on to optimizing HashFind!
 
 <a name="hashfind"></a>
-## 5. HashFind optimisation
+## 5. HashFind optimization
 
-This is the initial code for HashFind and ListFind (the second one is inlined by the compilator, so that's why we don't see it in profiler report)
+This is the initial code for HashFind and ListFind (the second one is inlined by the compiler, so that's why we don't see it in profiler report)
 ```
 char* HashFind (HashTable dis, char* str_to_find, __m128i* drop_buffer)
 {
@@ -261,16 +261,16 @@ list_data ListFind (List dis, list_data find_data)
 	return NULL;
 }
 ```
-And that's where the miracle comes. The report showed 29 seconds accelaration and now the program runs 3.45 times faster!
+And that's where the miracle comes. The report showed 29 seconds acceleration and now the program runs 3.45 times faster!
 
 ![FinalReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/FinalReport.jpg?raw=true)
 
-Attempts to speed the program up even more by rewriting HashFind on pure assembler resulted in either slower program or not functioning one, so the optimisation can be considered over at this point.
+Attempts to speed the program up even more by rewriting HashFind on pure assembler resulted in either slowing program down or breaking it completely, so the optimization can be considered over at this point.
 
 <a name="conclusion"></a>
 ## 6. Conclusion
 
-In the end, the usage of SSE instructions gave us **3.69 times accelaration** on top of \O2 optimisation.
+In the end, the usage of SSE instructions gave us **3.69 times accelaration** on top of \O2 optimization.
 
 <a name="links"></a>
 ## 7. Links

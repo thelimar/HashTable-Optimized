@@ -18,7 +18,7 @@ I have made a project that uses chained hash table with English words from a dic
 <a name="unopt"></a>
 ## 2. Unoptimized project
 
-To start with let's make it clear on the initial version of a project. The main structure being used is HashTable. It has 3 fields: its size, its hash function and an array of linked lists. When we are filling the hash table we are taking the English word, computing its hash and then pushing the Russian word into list with index equal to the remainder of the division of the hash by hash table's size. 
+To start with let's make it clear on the initial version of a project. The main structure being used is HashTable. It has 3 fields: its size, pointer to its hash function and an array of linked lists. When we are filling the hash table we are taking the English word, computing its hash and then pushing the Russian word into list with index equal to the remainder of the division of the hash by hash table's size. 
 
 ![Hash table structure](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HashStruct.jpg?raw=true)
 

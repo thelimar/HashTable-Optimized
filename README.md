@@ -7,8 +7,9 @@ Optimizing English to Russian dictionary project based on hash table using SSE i
 3. [Getting started](#start)
 4. [HashFunc optimization](#hashfunc)
 5. [HashFind optimization](#hashfind)
-6. [Conclusion](#conclusion)
-7. [Links](#links)
+6. [Xtreme optimization](#xtreme)
+7. [Conclusion](#conclusion)
+8. [Links](#links)
 
 <a name="intro"></a>
 ## 1. Introduction
@@ -208,14 +209,13 @@ unsigned int HashFuncMurMur2 (char* str, __m128i* drop_buffer)
 }
 ```
 As you can see I even had to change the prototype because I needed buffer to store 4 of my integers from _m128i_, and in order not to allocate and free memory every time the hash function is called (which takes up much longer time than we win with optimization) I decided to have buffer as an argument, so the allocation will happen only once. 
-So, the Profiler Report says that now program runs faster by... 2.5 seconds which is roughly 1.07 times faster.
+So, the Profiler Report says that now program runs faster by... 2.5 seconds which is roughly **1.07 times faster**.
 
 ![SSEMurMurReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/Intermediate.jpg?raw=true)
 
 Well, ![HonestWork](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/HonestWork.jpg?raw=true)
 
-We are probably seeing such pitiful result as the words from dictionary are not very long and MururHash2 basically already deals with 4 letters simultaneously, so the advantage of using SSE is not that noticeable.
-Currently, I don't have any idea how to optimize MurmurHash2 any further. Rewriting strlen() with SSE only made the program slightly slower (by ~1 second). So, now we have nothing to do but move on to optimizing HashFind!
+We are probably seeing such pitiful result as the words from dictionary are not very long and MururHash2 basically already deals with 4 letters simultaneously, so the advantage of using SSE is not that noticeable. We will come back for this function later, when we will get desperate, but for now let's move on to optimizing HashFind.
 
 <a name="hashfind"></a>
 ## 5. HashFind optimization
@@ -261,19 +261,110 @@ list_data ListFind (List dis, list_data find_data)
 	return NULL;
 }
 ```
-And that's where the miracle comes. The report showed 29 seconds acceleration and now the program runs 3.45 times faster!
+And that's where the miracle comes. The report showed 29 seconds acceleration and now the program runs **3.45 times faster**!
 
 ![FinalReport](https://github.com/thelimar/HashTable-Optimised/blob/main/Images/FinalReport.jpg?raw=true)
 
-Attempts to speed the program up even more by rewriting HashFind on pure assembler resulted in either slowing program down or breaking it completely, so the optimization can be considered over at this point.
+Attempts to speed the program up even more by rewriting HashFind on pure assembler resulted in either slowing program down or breaking it completely, so now let's try something Xtreme :).
+
+<a name="xtreme"></a>
+## 6. Xtreme optimisation
+
+Now we are starting to hit the concrete wall of hardware of our computer in our optimization attempts, but we can still make it easier for the processor to read our data. For the physical reasons processor reads information faster if its address is a multiple of the degree of 2. So, if all our words have such an address, the program will run slightly faster. This requires our words to have fixed size of some degree of 2. I decided to go with 32, but 64 symbols version can also have a right to exist. If a word is too short, we will have to fill the the rest of it with '\0', so the difference in addresses of two words next to each other is 32. This will actualy allow us to forget about a _char*_ type almost completely and work with just _m256i*_ as it holds exactly 32 chars. I have made quite a lot of small changes to the program, all of which you can check out in this repository in the latest commit, but here are some key moments:
+
+HashFind and ListFind:
+
+```
+__m256i* HashFind (HashTable dis, __m256i* str_to_find, int strlen, __m256i* drop_buffer)
+{
+	unsigned int hash = dis.HashFunc (str_to_find, strlen, drop_buffer) % dis.size;
+	if (dis.DataArray[hash].size == 0)
+		return NULL;
+	else
+		return ListFind (dis.DataArray[hash], str_to_find);
+}
+
+list_data ListFind (List dis, list_data find_data)
+{
+	ListNode* next_node = dis.head;
+	for (unsigned int i = 0; i < dis.size; i++)
+	{
+		if (_mm256_movemask_epi8 (_mm256_cmpeq_epi32 (*find_data, *next_node->data_one)) == -1)
+			return next_node->data_two;
+		else
+			next_node = next_node->next;
+	}
+
+	return NULL;
+}
+```
+
+HashFuncMurMur2:
+
+```
+unsigned int HashFuncMurMur2 (__m256i* str, int strlen, __m256i* drop_buffer)
+{
+	const unsigned int mask = 0x5bd1e995;
+	const unsigned int seed = 0;
+	const int r = 24;
+
+	unsigned int hash = seed ^ strlen;
+	const unsigned char* data = (const unsigned char*) str;
+
+	__m256i k_s = *str;
+
+	if (!drop_buffer)
+		return NULL;
+
+	k_s = _mm256_mullo_epi32 (k_s, _mm256_set1_epi32 (mask));
+	__m256i k_s_copy = k_s;
+	k_s_copy = _mm256_srli_epi32 (k_s_copy, r);
+	k_s = _mm256_xor_si256 (k_s, k_s_copy);
+	k_s = _mm256_mullo_epi32 (k_s, _mm256_set1_epi32(mask));
+
+	_mm256_store_si256 (drop_buffer, k_s);
+	int offset = 0;
+
+	while (strlen >= 4)
+	{
+		hash *= mask;
+		hash ^= ((unsigned int*) drop_buffer) [offset];
+
+		offset++;
+		strlen -= 4;
+		data += 4;
+	}
+
+	switch (strlen)
+	{
+	case 3:
+		hash ^= data[2] << 16;
+	case 2:
+		hash ^= data[1] << 8;
+	case 1:
+		hash ^= data[0];
+		hash *= mask;
+	};
+
+	hash ^= hash >> 13;
+	hash *= mask;
+	hash ^= hash >> 15;
+
+	return hash;
+}
+```
+
+Thanks to our Xtreme optimisation the program now runs for 1.6 seconds less which is **1.15 times faster**.
+
+![FinalFinalReport](https://github.com/thelimar/HashTable-Optimized/blob/main/Images/TheFinalFinalReport.jpg?raw=true)
 
 <a name="conclusion"></a>
-## 6. Conclusion
+## 7. Conclusion
 
-In the end, the usage of SSE instructions gave us **3.69 times accelaration** on top of \O2 optimization.
+In the end, the usage of SSE instructions gave us **4.24 times accelaration** on top of Visual Studios's \O2 optimization in Release mode.
 
 <a name="links"></a>
-## 7. Links
+## 8. Links
 
 2. [MurmurHash wikipedia page](https://en.wikipedia.org/wiki/MurmurHash#:~:text=MurmurHash%20is%20a%20non%2Dcryptographic%20hash,used%20in%20its%20inner%20loop)
 3. [Visual Studio](https://visualstudio.microsoft.com)

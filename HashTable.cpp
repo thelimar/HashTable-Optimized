@@ -176,22 +176,6 @@ unsigned int HashFuncROL (char* str)
 	return sum;
 }
 
-int SSEstrlen (char* str)
-{
-	int len = 0;
-	int seg_len = 16;
-	char zero_str[16] = "\0";
-
-	while (seg_len == 16)
-	{
-		seg_len = _mm_cmpistri (*((__m128i*) str), *((__m128i*) zero_str), _SIDD_CMP_EQUAL_EACH);
-		len += seg_len;
-		str += 16;
-	}
-
-	return len;
-}
-
 unsigned int HashFuncMurMur2 (__m256i* str, int strlen, __m256i* drop_buffer)
 {
 	const unsigned int mask = 0x5bd1e995;

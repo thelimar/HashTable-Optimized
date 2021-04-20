@@ -23,40 +23,40 @@ int main()
 		return -1;
 	}
 
-	HashTableLoad(&Table, dict_buffer, nLines, drop_buffer);
-	fclose(dict);
+	HashTableLoad (&Table, dict_buffer, nLines, drop_buffer);
+	fclose (dict);
 
 	FILE* output = fopen("HashMurMur2.txt", "wb");
-	CollisionDump(Table, output);
-	fclose(output);
+	CollisionDump (Table, output);
+	fclose (output);
 
 	char input_str[MAX_WORD_LEN] = "perspective";
 	int len_input = strlen (input_str);
 	printf ("%s\r\n", (char*) HashFind (Table, (__m256i*) input_str, len_input, drop_buffer));
 	for (int i = 0; i < 0.9 * 10000000; i++)
 	{
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'a';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'b';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'c';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'd';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'e';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 
 		*input_str = 'f';
-		HashFind(Table, (__m256i*) input_str, len_input, drop_buffer);
+		HashFind (Table, (__m256i*) input_str, len_input, drop_buffer);
 	}
 
-	HashTableDestruct(&Table);
+	HashTableDestruct (&Table);
 
 	_aligned_free (drop_buffer);
 	_aligned_free (dict_buffer);

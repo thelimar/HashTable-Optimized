@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <intrin.h>
+#include <immintrin.h>
 
 //#define DEBUG
 
@@ -30,7 +30,7 @@ enum ListErrors
 	SIZE_TOO_SMALL = 2,
 };
 
-typedef char* list_data;
+typedef __m256i* list_data;
 
 struct ListNode
 {
@@ -150,7 +150,7 @@ int ListDump (List dis)
 	{
 		if (next_node)
 		{
-			printf(list_data_format ", " list_data_format ", ", next_node->data_one, next_node->data_two);
+			printf (list_data_format " -- " list_data_format ", ", next_node->data_one, next_node->data_two);
 			next_node = next_node->next;
 		}
 	}
@@ -164,7 +164,7 @@ list_data ListFind (List dis, list_data find_data)
 	ListNode* next_node = dis.head;
 	for (unsigned int i = 0; i < dis.size; i++)
 	{
-		if ((_mm_cmpistri (*((__m128i*) next_node->data_one), *((__m128i*) find_data), _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY) == 16))
+		if (_mm256_movemask_epi8 (_mm256_cmpeq_epi32 (*find_data, *next_node->data_one)) == -1)
 			return next_node->data_two;
 		else
 			next_node = next_node->next;

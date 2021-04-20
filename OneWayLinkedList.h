@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <intrin.h>
+#include <immintrin.h>
 
 #define DEBUG
 
@@ -29,7 +29,7 @@ enum ListErrors
 	SIZE_TOO_SMALL = 2,
 };
 
-typedef char* list_data;
+typedef __m256i* list_data;
 
 struct ListNode
 {

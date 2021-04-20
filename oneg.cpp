@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <intrin.h>
 
 char* PoemEnter (int* nChars, int* nLines, FILE* source)
 {
@@ -28,18 +29,46 @@ char* PoemEnter (int* nChars, int* nLines, FILE* source)
 		}
 	}
 
-	char* parsed_text_buffer = (char*) calloc (source_size + 3 - *nLines, sizeof(char));
-	int parsed_index = 0;
+	text_buffer[source_size] = '\r';
 
-	if (parsed_text_buffer)
+	char* parsed_text_buffer = (char*) _aligned_malloc (*nLines * 32 * sizeof(char), 16);
+
+	if (!parsed_text_buffer)
+		return NULL;
+
+	for (int i = 0; i < *nLines * 32 * sizeof(char); i++)
+		parsed_text_buffer[i] = '\0';
+
+	int parsed_index = 0;
+	int source_index = 0;
+	int current_index = 0;
+
+	while (source_index < source_size + 1)
 	{
-		for (int i = 0; i < source_size + 2; i++)
+		current_index = 0;
+
+		while (current_index < 32)
 		{
-			if (text_buffer[i] != '\r')
-			{
-				parsed_text_buffer[parsed_index] = text_buffer[i];
-				parsed_index++;
-			}
+			if (text_buffer[source_index + current_index] == '\r')
+				break;
+
+			parsed_text_buffer[parsed_index + current_index] = text_buffer[source_index + current_index];
+			current_index++;
+		}
+
+		source_index += current_index;
+		parsed_index += current_index;
+
+		while (text_buffer[source_index] != '\r')
+			source_index++;
+
+		source_index += 2;
+
+		while (current_index < 32)
+		{
+			parsed_text_buffer[parsed_index] = '\0';
+			parsed_index++;
+			current_index++;
 		}
 	}
 
